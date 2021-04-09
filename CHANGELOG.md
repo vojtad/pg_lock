@@ -2,6 +2,8 @@
 
 ## Master - unreleased
 
+- Transaction level locking implemented using `PgLock#lock_for_transaction`
+
 ## 0.3.0
 
 - Fix method spelling (https://github.com/heroku/pg_lock/pull/16)

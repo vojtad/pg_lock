@@ -9,6 +9,11 @@ class PgLock
       self.args       = lock_args
     end
 
+    def lock_for_transaction
+      @lock = connection.exec('select pg_try_advisory_xact_lock($1,$2)', args)
+      return acquired?
+    end
+
     def lock
       @lock = connection.exec("select pg_try_advisory_lock($1,$2)", args)
       return acquired?
@@ -20,7 +25,7 @@ class PgLock
     end
 
     def acquired?
-      TRUE_VALUES.include?(@lock[0]["pg_try_advisory_lock"])
+      TRUE_VALUES.include?(@lock[0]["pg_try_advisory_lock"] || @lock[0]["pg_try_advisory_xact_lock"])
     rescue
       false
     end

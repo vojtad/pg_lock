@@ -147,4 +147,29 @@ describe PgLock do
       # PgLock.new(name: key).delete
     end
   end
+
+  it 'acquires transaction lock' do
+    key = testing_key('acquired_for_transaction_test')
+
+    connection = ActiveRecord::Base.connection.raw_connection
+    lock = PgLock.new(name: key, connection: connection)
+
+    connection.exec('BEGIN')
+    lock.lock_for_transaction
+    sleep(1)
+    expect(lock.acquired?).to be true
+    sleep(1)
+    connection.exec('COMMIT')
+    expect(lock.acquired?).to be false
+  end
+
+  it 'no lock acquired when acquiring trasaction lock outside of a transaction' do
+    key = testing_key('acquired_for_transaction_test')
+
+    connection = ActiveRecord::Base.connection.raw_connection
+    lock = PgLock.new(name: key)
+
+    lock.lock_for_transaction
+    expect(lock.acquired?).to be false
+  end
 end

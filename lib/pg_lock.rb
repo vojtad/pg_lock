@@ -40,6 +40,16 @@ class PgLock
     self.locket             = Locket.new(connection, [PG_LOCK_SPACE, key(name)])
   end
 
+  def lock_for_transaction
+    create_transaction_lock
+  end
+
+  def lock_for_transaction!(exception_klass = PgLock::UnableToLockError)
+    acquired = create_transaction_lock
+    raise exception_klass.new(name: name, attempts: max_attempts) unless acquired
+    acquired
+  end
+
   # Runs the given block if an advisory lock is able to be acquired.
   def lock(&block)
     result = internal_lock(&block)
@@ -76,6 +86,18 @@ class PgLock
       log.call(at: :exception, exception: e, pg_lock: true )
     else
       raise e
+    end
+  end
+
+  def create_transaction_lock
+    max_attempts.times.each do |attempt|
+      if locket.lock_for_transaction
+        log.call(at: :create_transaction_lock, attempt: attempt, args: locket.args, pg_lock: true) if log
+        return self
+      else
+        return false if attempt.next == max_attempts
+        sleep attempt_interval
+      end
     end
   end
 

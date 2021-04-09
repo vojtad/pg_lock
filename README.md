@@ -57,6 +57,22 @@ Second block called because it's sharing the same session
 
 If you need to syncronize code execution inside of the same process you should [use a mutex](http://ruby-doc.org/core-2.2.2/Mutex.html).
 
+## Transaction level locks
+
+Transaction level lock can be acquired inside of a transaction using `PgLock#lock_for_transaction`. If you try to acquire the same lock inside the same transaction multiple times it will not block.
+
+Transaction level locks cannot be manually released. They are released when transactions ends.
+
+```ruby
+connection = ActiveRecord::Base.connection.raw_connection
+lock = PgLock.new(name: 'resource_lock', connection: connection)
+
+connection.exec('BEGIN')
+lock.lock_for_transaction
+puts 'Do some work while resource is locked.'
+connection.exec('COMMIT')
+```
+
 ## Timeout
 
 By default, locked blocks will timeout after 60 seconds of execution, the lock will be released and any code executing will be terminated by a `Timeout::Error` will be raised. You can lower or raise this value by passing in a `ttl` (time to live) argument:
